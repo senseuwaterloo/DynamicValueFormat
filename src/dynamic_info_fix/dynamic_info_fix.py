@@ -9,20 +9,58 @@ from dynamic_format_generation.format_extract import FormatExtractor
 
 dynamic_types = ['Unit', 'Value', 'Identifier', 'Path', 'Undecided']
 
+# def get_dynamic_based_info(sampled_representative_info):
+#     dynamic_representative_info = []
+#     n_para = len(sampled_representative_info[0])
+#     p_index = 0
+#     while p_index < n_para:
+#         para_list = []
+#         for para_info in sampled_representative_info:
+#             if para_info[p_index] in para_list:
+#                 pass
+#             else:
+#                 para_list.append(para_info[p_index])
+#         dynamic_representative_info.append(para_list)
+#         p_index += 1
+#     return dynamic_representative_info
+
 def get_dynamic_based_info(sampled_representative_info):
     dynamic_representative_info = []
     n_para = len(sampled_representative_info[0])
-    p_index = 0
-    while p_index < n_para:
+    for p_index in range(n_para):
+        seen = set()
         para_list = []
         for para_info in sampled_representative_info:
-            if para_info[p_index] in para_list:
-                pass
-            else:
-                para_list.append(para_info[p_index])
+            v = para_info[p_index]
+            if v not in seen:
+                seen.add(v)
+                para_list.append(v)
         dynamic_representative_info.append(para_list)
-        p_index += 1
     return dynamic_representative_info
+
+def dynamic_based_df_generate_v2(new_structured_df, templates, extract_from_file):
+    dynamic_based_df_list = []
+    grouped = new_structured_df.groupby('NewTemplate', sort=False)
+
+    for template, group in grouped:
+        group_unique = group.drop_duplicates(subset='Content', keep='first')
+        ori_template = group['EventTemplate'].iloc[0]
+
+        para_info_list = group_unique['ParameterList'].tolist()
+        dynamic_based_info = get_dynamic_based_info(para_info_list)
+        content_list = group_unique['Content'].tolist()
+
+        for para_index, para_value_list in enumerate(dynamic_based_info):
+            dynamic_based_df_list.append([
+                ori_template,
+                template,
+                content_list,
+                para_index,
+                para_value_list
+            ])
+
+    return pd.DataFrame(dynamic_based_df_list,
+                        columns=['Template', 'NewTemplate', 'ContentList', 'ParameterIndex', 'ParameterValue'])
 
 def dynamic_based_df_generate(new_structured_df, templates, extract_from_file):
     dynamic_based_df_list = []
